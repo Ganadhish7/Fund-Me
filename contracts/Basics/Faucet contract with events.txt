@@ -1,0 +1,47 @@
+// mastering eth: example 7-3 Faucet.sol
+
+
+// SPDX-License-Identifier: MIT 
+
+pragma solidity ^0.8.19;
+
+contract owned{
+     address payable owner;
+
+     constructor(){
+        owner = payable(msg.sender);
+     }
+     // access control modifier 
+     modifier onlyOwner {
+        require(msg.sender == owner, "Only the contract owner can call this function");
+        _;
+     }
+}
+
+contract mortal is owned {
+    // contract destructor 
+    function destroy() public onlyOwner {
+        selfdestruct(owner);
+    }
+}
+
+contract Faucet is mortal {
+    event Withdrawal(address indexed to, uint amount);
+    event Deposit(address indexed from, uint amount);
+
+    // give out ether to anyone who asks 
+    function withdraw(uint withdraw_amount) public {
+        // limit withdraw amount
+        require(withdraw_amount <= 0.1 ether);
+        require(address(this).balance >= withdraw_amount, "Insufficient balance in faucet for withdrawal request");
+
+        // send the amount to the address that requested it 
+        payable(msg.sender).transfer(withdraw_amount);
+        emit Withdrawal(msg.sender, withdraw_amount);
+    }
+
+    // accept any incoming amount
+    receive () external payable{ 
+        emit Deposit(msg.sender, msg.value);
+    }
+}
